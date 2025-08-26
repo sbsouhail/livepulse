@@ -1,10 +1,19 @@
 import Alpine from 'alpinejs'
+import { initLP } from './$lp.js'
 
-window.Alpine = Alpine
+// declare global {
+//   interface Window {
+//     Alpine: typeof Alpine
+//   }
+// }
 
-document.addEventListener('alpine:init', () => {
-  console.log('Hello from Alpine!')
+// window.Alpine = Alpine
+
+// Register $lp magic before Alpine starts
+Alpine.plugin((AlpineInstance) => {
+  initLP(AlpineInstance)
 })
 
 Alpine.start()
-console.log('Hello from the client!!!')
+
+console.log('Alpine started with $lp support')

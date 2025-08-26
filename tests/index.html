@@ -8,8 +8,8 @@
 </head>
 
 <body>
-  <div x-data="{count:0}">
-    <button @click="count++" x-text="count +' clicks'"></button>
+  <div x-data lp:id="1" lp:snapshot="eyJjb3VudCI6MH0=">
+    <button @click="$lp.count++" x-text="$lp.count +' clicks'"></button>
   </div>
 </body>
 
