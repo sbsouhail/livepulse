@@ -1,42 +1,42 @@
 import { Alpine } from 'alpinejs'
+import { callBackend } from './lp_request.js'
+import { applyMorph } from './lp_morph.js'
 
 const proxies = new Map<string, any>()
 
 export function initLP(AlpineInstance: Alpine) {
-  // Register magic property
   AlpineInstance.magic('lp', (el: Element) => {
     const id = el.closest('[lp\\:id]')?.getAttribute('lp:id')
     return id && proxies.has(id) ? proxies.get(id) : {}
   })
 
-  // Initialize proxies for elements with lp:id
   document.querySelectorAll('[lp\\:id]').forEach((el) => {
     const id = el.getAttribute('lp:id')!
     if (!proxies.has(id)) {
       const data = el.getAttribute('lp:snapshot')
-      proxies.set(id, createProxy(data ? parseSnapshot(data) : {}, AlpineInstance))
+      proxies.set(id, createProxy(el, data ? parseSnapshot(data, id) : {}, AlpineInstance))
       el.removeAttribute('lp:snapshot')
     }
   })
 }
 
-function parseSnapshot(snapshot: string) {
+function parseSnapshot(snapshot: string, id: string) {
   try {
-    return JSON.parse(atob(snapshot))
+    const data = JSON.parse(atob(snapshot))
+    return { ...data, lp_meta: { ...data.lp_meta, id } }
   } catch (e) {
     console.error('Invalid lp:snapshot:', e)
     return {}
   }
 }
 
-function createProxy(data: Record<string, any>, AlpineInstance: Alpine) {
-  // Make the data reactive
+function createProxy(el: Element, data: Record<string, any>, AlpineInstance: Alpine) {
   const reactiveData = AlpineInstance.reactive(data)
+
   return new Proxy(reactiveData, {
     get(target, property) {
       const prop = property.toString()
 
-      // Handle nested properties
       if (prop.includes('.')) {
         return prop
           .split('.')
@@ -45,8 +45,15 @@ function createProxy(data: Record<string, any>, AlpineInstance: Alpine) {
 
       if (prop in target) return target[prop]
 
-      // Assume backend method
-      return (...args: any[]) => console.log(`Calling backend action: ${prop}`, args)
+      // Backend method call
+      return async (...args: any[]) => {
+        console.log(`Calling backend action: ${prop}`, args)
+        const result = await callBackend(target, prop, args)
+        if (result) {
+          if (result.html) applyMorph(el, result.html, AlpineInstance)
+          if (result.data) Object.assign(target, result.data)
+        }
+      }
     },
 
     set(target, property, value) {
@@ -74,7 +81,6 @@ function createProxy(data: Record<string, any>, AlpineInstance: Alpine) {
         }
 
         obj[lastKey] = value
-        console.log(`Updated nested property ${prop} to`, value)
         return true
       }
 
@@ -84,7 +90,6 @@ function createProxy(data: Record<string, any>, AlpineInstance: Alpine) {
       }
 
       target[prop] = value
-      console.log(`Updated ${prop} to`, value)
       return true
     },
   })

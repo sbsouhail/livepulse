@@ -4,12 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Document</title>
-  <script src="../build/dist/livepulse.iife.js" defer></script>
-</head>
+  <script src="../build/dist/livepulse.iife.js" csrfToken="123" defer></script>
+  </head>
 
 <body>
-  <div x-data lp:id="1" lp:snapshot="eyJjb3VudCI6MH0=">
-    <button @click="$lp.count++" x-text="$lp.count +' clicks'"></button>
+  <div x-data lp:id="1" lp:snapshot="eyJjb3VudCI6MCwibHBfbWV0YSI6eyJuYW1lIjoiY291bnRlciJ9fQ==">
+    <button @click="$lp.increment()" x-text="$lp.count +' clicks'"></button>
   </div>
 </body>
 
