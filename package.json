@@ -14,7 +14,7 @@
     "dist/**/*"
   ],
   "exports": {
-    "./livepulse_provider": "./dist/adonisjs/live_pulse_provider.js"
+    "./adonisjs/livepulse_provider": "./dist/adonisjs/live_pulse_provider.js"
   },
   "scripts": {
     "build": "tsc && pnpm run build:client",
