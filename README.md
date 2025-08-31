@@ -1,127 +1,121 @@
-# AdonisJS package starter kit
 
-> A boilerplate for creating AdonisJS packages
+# TS NPM Package Boilerplate (2025)
 
-This repo provides you with a starting point for creating AdonisJS packages. Of course, you can create a package from scratch with your folder structure and workflow. However, using this starter kit can speed up the process, as you have fewer decisions to make.
+This TypeScript NPM package boilerplate is designed to kickstart the development of TypeScript libraries for Node.js and the browser. It features a modern build setup with TypeScript, leveraging `tsup` for bundling and `@changesets/cli` for version management. The package exports a simple function as an example to demonstrate the setup.
 
-## Setup
+## Features
 
-- Clone the repo on your computer, or use `giget` to download this repo without the Git history.
-  ```sh
-  npx giget@latest gh:adonisjs/pkg-starter-kit
-  ```
-- Install dependencies.
-- Update the `package.json` file and define the `name`, `description`, `keywords`, and `author` properties.
-- The repo is configured with an MIT license. Feel free to change that if you are not publishing under the MIT license.
+- TypeScript for type safety.
+- Biome for linting and formatting.
+- Dual package output (CommonJS and ESM) for compatibility.
+- Type definitions for TypeScript projects.
+- Automated build and release scripts.
 
-## Folder structure
+## Prerequisites
 
-The starter kit mimics the folder structure of the official packages. Feel free to rename files and folders as per your requirements.
+- Node.js v22.5.1 (ensure you have this version by using `.nvmrc`)
+- `pnpm` (Follow [pnpm installation guide](https://pnpm.io/installation) if you haven't installed it)
+- [Biome](https://biomejs.dev/) for linting and formatting
 
-```
-├── providers
-├── src
-├── bin
-├── stubs
-├── configure.ts
-├── index.ts
-├── LICENSE.md
-├── package.json
-├── README.md
-├── tsconfig.json
-├── tsnode.esm.js
+## Reuse
+
+### Step 1: Clone the Boilerplate Repository
+
+First, clone the existing repository `simonorzel26/npm-package-boilerplate-2025` to your local machine. This step involves copying all the files from the original repository.
+
+```bash
+git clone https://github.com/simonorzel26/npm-package-boilerplate-2025.git <your-new-repository-name>
+cd <your-new-repository-name>
 ```
 
-- The `configure.ts` file exports the `configure` hook to configure the package using the `node ace configure` command.
-- The `index.ts` file is the main entry point of the package.
-- The `tsnode.esm.js` file runs TypeScript code using TS-Node + SWC. Please read the code comment in this file to learn more.
-- The `bin` directory contains the entry point file to run Japa tests.
-- Learn more about [the `providers` directory](./providers/README.md).
-- Learn more about [the `src` directory](./src/README.md).
-- Learn more about [the `stubs` directory](./stubs/README.md).
+### Step 2: Remove the Existing Git History
 
-### File system naming convention
+Since you're creating a new project, you'll likely want to start with a clean history:
 
-We use `snake_case` naming conventions for the file system. The rule is enforced using ESLint. However, turn off the rule and use your preferred naming conventions.
-
-## Peer dependencies
-
-The starter kit has a peer dependency on `@adonisjs/core@6`. Since you are creating a package for AdonisJS, you must make it against a specific version of the framework core.
-
-If your package needs Lucid to be functional, you may install `@adonisjs/lucid` as a development dependency and add it to the list of `peerDependencies`.
-
-As a rule of thumb, packages installed in the user application should be part of the `peerDependencies` of your package and not the main dependency.
-
-For example, if you install `@adonisjs/core` as a main dependency, then essentially, you are importing a separate copy of `@adonisjs/core` and not sharing the one from the user application. Here is a great article explaining [peer dependencies](https://blog.bitsrc.io/understanding-peer-dependencies-in-javascript-dbdb4ab5a7be).
-
-## Published files
-
-Instead of publishing your repo's source code to npm, you must cherry-pick files and folders to publish only the required files.
-
-The cherry-picking uses the `files` property inside the `package.json` file. By default, we publish the following files and folders.
-
-```json
-{
-  "files": [
-    "build/src",
-    "build/providers",
-    "build/stubs",
-    "build/index.d.ts",
-    "build/index.js",
-    "build/configure.d.ts",
-    "build/configure.js"
-  ]
-}
+```bash
+rm -rf .git
 ```
 
-If you create additional folders or files, mention them inside the `files` array.
+This command removes the `.git` directory which contains all the git history of the original repository.
 
-## Exports
+### Step 3: Initialize a New Repository
 
-[Node.js Subpath exports](https://nodejs.org/api/packages.html#subpath-exports) allows you to define the exports of your package regardless of the folder structure. This starter kit defines the following exports.
+Now, initialize a new git repository:
 
-```json
-{
-  "exports": {
-    ".": "./build/index.js",
-    "./types": "./build/src/types.js"
-  }
-}
+```bash
+git init
+git add .
+git commit -m "Initial commit based on npm-package-boilerplate-2025"
 ```
 
-- The dot `.` export is the main export.
-- The `./types` exports all the types defined inside the `./build/src/types.js` file (the compiled output).
+### Step 4: Create a New Repository on GitHub
 
-Feel free to change the exports as per your requirements.
+Go to GitHub and create a new repository named `<your-new-repository-name>`. Do not initialize it with a README, .gitignore, or license since you are importing an existing project.
 
-## Testing
+### Step 5: Push to GitHub
 
-We configure the [Japa test runner](https://japa.dev/) with this starter kit. Japa is used in AdonisJS applications as well. Just run one of the following commands to execute tests.
+Link your local repository to the GitHub repository and push the changes:
 
-- `npm run test`: This command will first lint the code using ESlint and then run tests and report the test coverage using [c8](https://github.com/bcoe/c8).
-- `npm run quick:test`: Runs only the tests without linting or coverage reporting.
+```bash
+git remote add origin https://github.com/<your-username>/<your-new-repository-name>.git
+git branch -M main
+git push -u origin main
+```
 
-The starter kit also has a Github workflow file to run tests using Github Actions. The tests are executed against `Node.js 20.x` and `Node.js 21.x` versions on both Linux and Windows. Feel free to edit the workflow file in the `.github/workflows` directory.
+Replace `<your-username>` with your GitHub username.
 
-## TypeScript workflow
+## Installation
 
-- The starter kit uses [tsc](https://www.typescriptlang.org/docs/handbook/compiler-options.html) for compiling the TypeScript to JavaScript when publishing the package.
-- [TS-Node](https://typestrong.org/ts-node/) and [SWC](https://swc.rs/) are used to run tests without compiling the source code.
-- The `tsconfig.json` file is extended from [`@adonisjs/tsconfig`](https://github.com/adonisjs/tooling-config/tree/main/packages/typescript-config) and uses the `NodeNext` module system. Meaning the packages are written using ES modules.
-- You can perform type checking without compiling the source code using the `npm run type check` script.
+To use this boilerplate for your project, clone the repository and install the dependencies.
 
-Feel free to explore the `tsconfig.json` file for all the configured options.
+```bash
+pnpm install
+```
 
-## ESLint and Prettier setup
+## Usage
 
-The starter kit configures ESLint and Prettier
-using our [shared config](https://github.com/adonisjs/tooling-config/tree/main/packages).
-ESLint configuration is stored within the `eslint.config.js` file.
-Prettier configuration is stored within the `package.json` file.
-Feel free to change the configuration, use custom plugins, or remove both tools altogether.
+After installation, you can start using the boilerplate to build your TypeScript library. Here's how to import and use the example function exported by this package:
 
-## Using Stale bot
+```typescript
+import { foo } from 'your-package-name';
 
-The [Stale bot](https://github.com/apps/stale) is a Github application that automatically marks issues and PRs as stale and closes after a specific duration of inactivity.
+console.log(foo('Hello, world!'));
+```
 
-Feel free to delete the `.github/stale.yml` and `.github/lock.yml` files if you decide not to use the Stale bot.
+## Development
+
+This package includes several scripts to help with development:
+
+- `pnpm run build`: Compiles the TypeScript source code and generates both CommonJS and ESM modules along with type definitions.
+- `pnpm run lint`: Runs TypeScript compiler checks without emitting code to ensure type safety.
+- `pnpm run release`: Bundles the package and publishes it to NPM with version management.
+
+### Adding New Functions
+
+To add a new function, create a `.ts` file in the `src` directory. For example:
+
+```typescript
+// src/newFunction.ts
+export const newFunction = (): void => {
+  // Implementation here
+};
+```
+
+Then, export it from `index.ts`:
+
+```typescript
+// src/index.ts
+export * from './newFunction';
+```
+
+## Contributing
+
+Contributions are welcome! Please submit a pull request or create an issue for any features, bug fixes, or improvements.
+
+## License
+
+This project is open-sourced under the MIT License. See the [LICENSE](https://github.com/simonorzel26/ts-npm-package-boilerplate-2025/blob/main/LICENSE) file for more details.
+
+## Author
+
+Simon Orzel

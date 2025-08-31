@@ -1,0 +1,6 @@
+onlyBuiltDependencies:
+  - '@biomejs/biome'
+  - esbuild
+
+overrides:
+  livepulse: link:../../../AppData/Local/pnpm/global/5/node_modules/livepulse
