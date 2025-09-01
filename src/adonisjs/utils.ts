@@ -27,7 +27,7 @@ export function generateId(): string {
  * Get component name from class
  */
 export function getComponentName(constructorFn: { name: string }): string {
-	return constructorFn.name.toLowerCase().replace(/_?livepulse$/, "");
+	return constructorFn.name.toLowerCase();
 }
 
 /**
@@ -38,14 +38,14 @@ export function addLpAttributes(
 	lpId: string,
 	data: Record<string, unknown>,
 	componentName: string,
-	csrfToken?: string,
+	alreadyRendered: boolean,
 ): string {
 	const snapshot = {
 		data,
 		name: componentName,
-		csrf: csrfToken,
+		id: lpId,
 	};
-	const attrs = `lp:id="${lpId}" lp:snapshot="${btoa(JSON.stringify(snapshot))}"`;
+	const attrs = `lp:id="${lpId}" ${alreadyRendered ? "" : `lp:snapshot="${btoa(JSON.stringify(snapshot))}"`}`;
 
 	// Simple regex to add attributes to first tag
 	return html.replace(/^(\s*<[^>]+)/, `$1 ${attrs}`);
@@ -65,7 +65,7 @@ export async function importComponent(
 	}
 
 	const { default: ComponentClass } = await import(
-		`#controllers/livepulse/${name.toLowerCase()}_livepulse`
+		`../../../../../../../app/controllers/livepulse/${name.toLowerCase()}.js`
 	);
 	cache.set(name, ComponentClass);
 	return ComponentClass;

@@ -33,6 +33,7 @@ function parseSnapshot(snapshot: string, id: string) {
 				...Object.fromEntries(
 					Object.entries(parsed).filter(([key]) => key !== "data"),
 				),
+				id,
 			};
 		}
 		// Otherwise, extract lp_meta and wrap user data
@@ -56,7 +57,7 @@ function createProxy(
 	const reactiveData = AlpineInstance.reactive(data);
 
 	return new Proxy(reactiveData, {
-		get(target, property) {
+		get(target: { data: Record<string, unknown> }, property) {
 			const prop = property.toString();
 
 			if (prop.includes(".")) {
@@ -71,11 +72,13 @@ function createProxy(
 					);
 			}
 
-			if (prop in target) return target[prop];
+			if (prop in target.data) return target.data[prop];
 
 			// Backend method call
 			return async (...args: unknown[]) => {
-				console.log(`Calling backend action: ${prop}`, args);
+				// Filter out event objects
+				const filteredArgs = args.filter((arg) => !(arg instanceof Event));
+				console.log(`Calling backend action: ${prop}`, filteredArgs);
 				// Create snapshot with both user data and metadata
 				const snapshot = {
 					data: target.data,
@@ -83,7 +86,7 @@ function createProxy(
 						Object.entries(target).filter(([key]) => key !== "data"),
 					),
 				};
-				const result = await callBackend(snapshot, prop, args);
+				const result = await callBackend(snapshot, prop, filteredArgs);
 				if (result) {
 					if (result.html) applyMorph(el, result.html, AlpineInstance);
 					if (result.data)
@@ -92,12 +95,12 @@ function createProxy(
 			};
 		},
 
-		set(target, property, value) {
+		set(target: { data: Record<string, unknown> }, property, value) {
 			const prop = property.toString();
 
 			if (prop.includes(".")) {
 				const keys = prop.split(".");
-				let obj: Record<string, unknown> = target;
+				let obj: Record<string, unknown> = target.data;
 
 				for (let i = 0; i < keys.length - 1; i++) {
 					const key = keys[i];
@@ -124,12 +127,14 @@ function createProxy(
 				return true;
 			}
 
-			if (!(prop in target)) {
-				console.error(`Cannot set value. Property "${prop}" does not exist.`);
-				return false;
+			// Set properties in target.data instead of target
+			if (prop in target.data) {
+				target.data[prop] = value;
+				return true;
 			}
 
-			target[prop] = value;
+			// Allow setting new properties in data
+			target.data[prop] = value;
 			return true;
 		},
 	});

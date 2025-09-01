@@ -1,42 +1,48 @@
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import type { HttpContext } from "@adonisjs/core/http";
-import router from "@adonisjs/core/services/router";
 import type { ApplicationService } from "@adonisjs/core/types";
 import edge from "edge.js";
 import type { TagContract } from "edge.js/types";
 import type { LivePulsePayload, LivePulseResponse } from "./types.js";
 import { extractData, importComponent } from "./utils.js";
-
 /**
  * LivePulse Provider for AdonisJS
  */
 export default class LivePulseProvider {
 	constructor(protected app: ApplicationService) {}
 
-	register() {}
-	async boot() {}
-	async ready() {}
-	async shutdown() {}
-
-	async start() {
+	start() {
 		this.registerUpdateRoute();
 		this.registerEdgeHelper();
 		this.registerEdgeTag();
+		this.registerScriptHelper();
 	}
 
 	/**
 	 * Register update route
 	 */
-	private registerUpdateRoute() {
+	private async registerUpdateRoute() {
+		const router = await this.app.container.make("router");
+		router.get("lp/livepulse.iffe.js", async (ctx: HttpContext) => {
+			const __filename = fileURLToPath(import.meta.url);
+			const __dirname = path.dirname(__filename);
+			return ctx.response
+				.type("text/javascript")
+				.send(
+					fs.readFileSync(
+						path.join(__dirname, "..", "client", "livepulse.iife.js"),
+					),
+				);
+		});
 		router.post("/lp/update", async (ctx: HttpContext) => {
 			const { request, response } = ctx;
-
 			try {
 				const payload = this.validatePayload(request.all());
 				const instance = await this.createInstance(payload, ctx);
-
 				await this.callMethod(instance, payload.action, payload.args);
 				const result = await this.renderResponse(instance);
-
 				return response.json(result);
 			} catch (error) {
 				return this.handleError(response, error);
@@ -95,6 +101,26 @@ export default class LivePulseProvider {
 	}
 
 	/**
+	 * Register script tag
+	 */
+	private registerScriptHelper() {
+		const livePulseScript: TagContract = {
+			block: false,
+			seekable: false,
+			tagName: "livePulseScript",
+			compile(_parser, buffer, token) {
+				buffer.writeStatement(
+					`${buffer.outputVariableName} += \`<!-- LivePulse script -->\n<script defer src="lp/livepulse.iffe.js" csrfToken="\${state.csrfToken}"></script>\``,
+					token.filename,
+					token.loc.start.line,
+				);
+			},
+		};
+
+		edge.registerTag(livePulseScript);
+	}
+
+	/**
 	 * Validate payload
 	 */
 	private validatePayload(payload: Record<string, unknown>): LivePulsePayload {
@@ -107,7 +133,11 @@ export default class LivePulseProvider {
 		return {
 			action: action as string,
 			args: args as unknown[],
-			snapshot: snapshot as { id: string; data?: Record<string, unknown> },
+			snapshot: JSON.parse(atob(snapshot as string)) as {
+				id: string;
+				name: string;
+				data?: Record<string, unknown>;
+			},
 		};
 	}
 
@@ -120,11 +150,12 @@ export default class LivePulseProvider {
 			throw new Error("Missing snapshot ID");
 		}
 
-		const ComponentClass = await importComponent(snapshot.id);
+		const ComponentClass = await importComponent(snapshot.name);
 		const instance = new (ComponentClass as any)(ctx);
 
 		if (snapshot.data) {
 			Object.assign(instance, snapshot.data);
+			instance.setLpId(snapshot.id);
 		}
 
 		return instance;

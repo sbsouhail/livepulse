@@ -38,24 +38,23 @@ export default abstract class LivePulseComponent {
 			viewData[`$${key}`] = value;
 		}
 		// Note: view.share might not be available in all contexts
-		// this.ctx.view.share(viewData);
+		this.ctx.view.share(viewData);
 
 		const html = await this.render(this.ctx);
+
+		const alreadyRendered = !!this.lpId;
 
 		// Generate ID if needed
 		if (!this.lpId) {
 			this.lpId = generateId();
 		}
 
-		// Get CSRF token from request (if available)
-		const csrfToken = (this.ctx.request as any).csrfToken;
-
 		return addLpAttributes(
 			html,
 			this.lpId,
 			data,
 			getComponentName(this.constructor),
-			csrfToken,
+			alreadyRendered,
 		);
 	}
 
