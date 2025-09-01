@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LivePulse Example</title>
+    <script src="./dist/client/livepulse.iife.js" defer csrfToken="test-csrf-token"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .counter {
+            font-size: 18px;
+            margin: 10px 0;
+        }
+        .user-info {
+            background: #e9ecef;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        input {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>LivePulse Example</h1>
+    
+    <!-- Counter Example -->
+    <div class="container">
+        <h2>Counter Example</h2>
+        <div x-data="" lp:id="counter-1" lp:snapshot="eyJkYXRhIjp7ImNvdW50IjowfSwiaWQiOiJjb3VudGVyLTEifQ==">
+            <div class="counter">
+                <button @click="$lp.increment()">Increment</button>
+                <button @click="$lp.decrement()">Decrement</button>
+                <button @click="$lp.reset()">Reset</button>
+                <span x-text="'Count: ' + $lp.data.count"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- User Form Example -->
+    <div class="container">
+        <h2>User Form Example</h2>
+        <div x-data="" lp:id="user-form" lp:snapshot="eyJkYXRhIjp7Im5hbWUiOiIiLCJlbWFpbCI6IiIsIm1lc3NhZ2UiOiIifSwiaWQiOiJ1c2VyLWZvcm0ifQ==">
+            <div class="user-info">
+                <input type="text" x-model="$lp.data.name" placeholder="Name">
+                <input type="email" x-model="$lp.data.email" placeholder="Email">
+                <textarea x-model="$lp.data.message" placeholder="Message" rows="3" style="width: 100%; margin: 5px 0;"></textarea>
+                <button @click="$lp.submitForm()">Submit</button>
+                <button @click="$lp.clearForm()">Clear</button>
+            </div>
+            <div x-show="$lp.data.submitted" style="color: green; margin-top: 10px;">
+                Form submitted successfully!
+            </div>
+        </div>
+    </div>
+
+    <!-- Todo List Example -->
+    <div class="container">
+        <h2>Todo List Example</h2>
+        <div x-data="" lp:id="todo-list" lp:snapshot="eyJkYXRhIjp7InRvZG9zIjpbXSwibmV3VG9kbyI6IiJ9LCJpZCI6InRvZG8tbGlzdCJ9">
+            <div>
+                <input type="text" x-model="$lp.data.newTodo" placeholder="Add new todo" @keyup.enter="$lp.addTodo()">
+                <button @click="$lp.addTodo()">Add</button>
+            </div>
+            <ul style="list-style: none; padding: 0;">
+                <template x-for="(todo, index) in $lp.data.todos" :key="index">
+                    <li style="display: flex; align-items: center; margin: 5px 0; padding: 10px; background: #f8f9fa; border-radius: 4px;">
+                        <input type="checkbox" x-model="todo.completed">
+                        <span x-text="todo.text" style="margin-left: 10px; flex: 1;" :style="todo.completed ? 'text-decoration: line-through; color: #6c757d;' : ''"></span>
+                        <button @click="$lp.removeTodo(index)" style="background: #dc3545; margin-left: 10px;">Delete</button>
+                    </li>
+                </template>
+            </ul>
+            <div x-show="$lp.data.todos.length > 0">
+                <button @click="$lp.clearCompleted()">Clear Completed</button>
+                <span x-text="'Completed: ' + $lp.data.todos.filter(t => t.completed).length + '/' + $lp.data.todos.length"></span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Mock backend responses for testing
+        const originalFetch = window.fetch;
+        window.fetch = function(url, options) {
+            if (url === '/lp/update') {
+                const body = JSON.parse(options.body);
+                const snapshot = JSON.parse(atob(body.snapshot));
+                const action = body.action;
+                const args = body.args;
+
+                console.log('Backend call:', { action, args, snapshot });
+
+                // Mock responses based on action
+                let response = { html: null, data: null };
+
+                if (action === 'increment') {
+                    response.data = { count: (snapshot.data.count || 0) + 1 };
+                } else if (action === 'decrement') {
+                    response.data = { count: Math.max(0, (snapshot.data.count || 0) - 1) };
+                } else if (action === 'reset') {
+                    response.data = { count: 0 };
+                } else if (action === 'submitForm') {
+                    response.data = { submitted: true };
+                } else if (action === 'clearForm') {
+                    response.data = { name: '', email: '', message: '', submitted: false };
+                } else if (action === 'addTodo') {
+                    const newTodo = args[0] || snapshot.data.newTodo;
+                    if (newTodo && newTodo.trim()) {
+                        const todos = snapshot.data.todos || [];
+                        todos.push({ text: newTodo.trim(), completed: false });
+                        response.data = { todos, newTodo: '' };
+                    }
+                } else if (action === 'removeTodo') {
+                    const index = args[0];
+                    const todos = snapshot.data.todos || [];
+                    todos.splice(index, 1);
+                    response.data = { todos };
+                } else if (action === 'clearCompleted') {
+                    const todos = snapshot.data.todos || [];
+                    const filteredTodos = todos.filter(todo => !todo.completed);
+                    response.data = { todos: filteredTodos };
+                }
+
+                return Promise.resolve({
+                    ok: true,
+                    json: () => Promise.resolve(response)
+                });
+            }
+            return originalFetch.apply(this, arguments);
+        };
+    </script>
+</body>
+</html>

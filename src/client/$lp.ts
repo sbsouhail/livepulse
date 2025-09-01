@@ -25,11 +25,26 @@ export function initLP(AlpineInstance: Alpine) {
 
 function parseSnapshot(snapshot: string, id: string) {
 	try {
-		const data = JSON.parse(atob(snapshot));
-		return { ...data, lp_meta: { ...data.lp_meta, id } };
+		const parsed = JSON.parse(atob(snapshot));
+		// If the snapshot already has a data structure, use it as is
+		if (parsed.data && typeof parsed.data === "object") {
+			return {
+				data: parsed.data,
+				...Object.fromEntries(
+					Object.entries(parsed).filter(([key]) => key !== "data"),
+				),
+			};
+		}
+		// Otherwise, extract lp_meta and wrap user data
+		const { lp_meta, ...userData } = parsed;
+		return {
+			data: userData,
+			...lp_meta,
+			id,
+		};
 	} catch (e) {
 		console.error("Invalid lp:snapshot:", e);
-		return {};
+		return { data: {}, id };
 	}
 }
 
@@ -61,10 +76,18 @@ function createProxy(
 			// Backend method call
 			return async (...args: unknown[]) => {
 				console.log(`Calling backend action: ${prop}`, args);
-				const result = await callBackend(target, prop, args);
+				// Create snapshot with both user data and metadata
+				const snapshot = {
+					data: target.data,
+					...Object.fromEntries(
+						Object.entries(target).filter(([key]) => key !== "data"),
+					),
+				};
+				const result = await callBackend(snapshot, prop, args);
 				if (result) {
 					if (result.html) applyMorph(el, result.html, AlpineInstance);
-					if (result.data) Object.assign(target, result.data);
+					if (result.data)
+						Object.assign(target.data as Record<string, unknown>, result.data);
 				}
 			};
 		},
