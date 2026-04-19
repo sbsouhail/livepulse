@@ -1,16 +1,15 @@
-import { defineConfig } from 'vite'
-import path from 'node:path'
+import { defineConfig } from "vite";
 
 export default defineConfig({
-  build: {
-    lib: {
-      entry: path.resolve(__dirname, 'client/index.ts'),
-      name: 'LivePulse',
-      fileName: (format) => `livepulse.${format}.js`,
-      formats: ['iife'],
-    },
-    outDir: 'build/dist',
-    emptyOutDir: true,
-    minify: true,
-  },
-})
+	build: {
+		lib: {
+			entry: "src/client/index.ts",
+			name: "LivePulse",
+			fileName: (format) => `livepulse.${format}.js`,
+			formats: ["iife"],
+		},
+		outDir: "dist/client",
+		emptyOutDir: true,
+		minify: true,
+	},
+});

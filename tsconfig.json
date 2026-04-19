@@ -1,8 +1,9 @@
 {
-  "extends": "@adonisjs/tsconfig/tsconfig.package.json",
+  "extends": "@total-typescript/tsconfig/tsc/dom/library",
   "compilerOptions": {
-    "rootDir": "./",
-    "outDir": "./build",
-    "lib": ["DOM"]
-  }
+    "rootDir": "src",
+    "outDir": "dist"
+  },
+  "include": ["src"],
+  "exclude": ["src/client/**/*"]
 }

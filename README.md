@@ -1,127 +1,184 @@
-# AdonisJS package starter kit
+# LivePulse
 
-> A boilerplate for creating AdonisJS packages
+> **Status: Development paused — resuming soon.**
+> This project was on hold pending the release of AdonisJS v7, which just shipped. Active development is resuming.
 
-This repo provides you with a starting point for creating AdonisJS packages. Of course, you can create a package from scratch with your folder structure and workflow. However, using this starter kit can speed up the process, as you have fewer decisions to make.
+Reactive UI components for [AdonisJS](https://adonisjs.com/) — powered by [Edge.js](https://edgejs.dev/) and [Alpine.js](https://alpinejs.dev/). Build interactive interfaces without writing frontend JavaScript. Inspired by [Laravel Livewire](https://livewire.laravel.com/).
+
+---
+
+## How it works
+
+1. Define a `LivePulseComponent` class (backend) with state and actions
+2. Render it in Edge templates with `@lp('component-name')`
+3. Call backend actions from Alpine.js HTML using `$lp.actionName()`
+4. LivePulse sends an AJAX request to `/lp/update`, re-renders the component, and morphs the DOM
+
+No page reloads. No manual fetch calls. No frontend state management.
+
+---
+
+## Installation
+
+```bash
+npm install livepulse
+# or
+pnpm add livepulse
+```
+
+### Peer dependencies
+
+```bash
+pnpm add @adonisjs/core edge.js alpinejs @alpinejs/morph
+```
+
+---
 
 ## Setup
 
-- Clone the repo on your computer, or use `giget` to download this repo without the Git history.
-  ```sh
-  npx giget@latest gh:adonisjs/pkg-starter-kit
-  ```
-- Install dependencies.
-- Update the `package.json` file and define the `name`, `description`, `keywords`, and `author` properties.
-- The repo is configured with an MIT license. Feel free to change that if you are not publishing under the MIT license.
+### 1. Register the provider
 
-## Folder structure
+In `adonisrc.ts`:
 
-The starter kit mimics the folder structure of the official packages. Feel free to rename files and folders as per your requirements.
+```ts
+import { defineConfig } from '@adonisjs/core/build/config'
 
-```
-├── providers
-├── src
-├── bin
-├── stubs
-├── configure.ts
-├── index.ts
-├── LICENSE.md
-├── package.json
-├── README.md
-├── tsconfig.json
-├── tsnode.esm.js
+export default defineConfig({
+  providers: [
+    // ...other providers
+    () => import('livepulse/adonisjs/livepulse_provider'),
+  ],
+})
 ```
 
-- The `configure.ts` file exports the `configure` hook to configure the package using the `node ace configure` command.
-- The `index.ts` file is the main entry point of the package.
-- The `tsnode.esm.js` file runs TypeScript code using TS-Node + SWC. Please read the code comment in this file to learn more.
-- The `bin` directory contains the entry point file to run Japa tests.
-- Learn more about [the `providers` directory](./providers/README.md).
-- Learn more about [the `src` directory](./src/README.md).
-- Learn more about [the `stubs` directory](./stubs/README.md).
+### 2. Include the client script
 
-### File system naming convention
+Add the LivePulse client bundle to your layout template. It registers the `$lp` Alpine.js magic automatically.
 
-We use `snake_case` naming conventions for the file system. The rule is enforced using ESLint. However, turn off the rule and use your preferred naming conventions.
-
-## Peer dependencies
-
-The starter kit has a peer dependency on `@adonisjs/core@6`. Since you are creating a package for AdonisJS, you must make it against a specific version of the framework core.
-
-If your package needs Lucid to be functional, you may install `@adonisjs/lucid` as a development dependency and add it to the list of `peerDependencies`.
-
-As a rule of thumb, packages installed in the user application should be part of the `peerDependencies` of your package and not the main dependency.
-
-For example, if you install `@adonisjs/core` as a main dependency, then essentially, you are importing a separate copy of `@adonisjs/core` and not sharing the one from the user application. Here is a great article explaining [peer dependencies](https://blog.bitsrc.io/understanding-peer-dependencies-in-javascript-dbdb4ab5a7be).
-
-## Published files
-
-Instead of publishing your repo's source code to npm, you must cherry-pick files and folders to publish only the required files.
-
-The cherry-picking uses the `files` property inside the `package.json` file. By default, we publish the following files and folders.
-
-```json
-{
-  "files": [
-    "build/src",
-    "build/providers",
-    "build/stubs",
-    "build/index.d.ts",
-    "build/index.js",
-    "build/configure.d.ts",
-    "build/configure.js"
-  ]
-}
+```html
+<script src="/livepulse.iife.js" defer></script>
 ```
 
-If you create additional folders or files, mention them inside the `files` array.
+> The client bundle initializes Alpine.js and the `$lp` magic. Do **not** initialize Alpine.js separately.
 
-## Exports
+---
 
-[Node.js Subpath exports](https://nodejs.org/api/packages.html#subpath-exports) allows you to define the exports of your package regardless of the folder structure. This starter kit defines the following exports.
+## Creating a component
 
-```json
-{
-  "exports": {
-    ".": "./build/index.js",
-    "./types": "./build/src/types.js"
+Place components in `app/controllers/livepulse/`. The file name must follow the pattern `{name}_livepulse.ts`.
+
+```ts
+// app/controllers/livepulse/counter_livepulse.ts
+import { LivePulseComponent } from 'livepulse'
+import type { HttpContext } from '@adonisjs/core/http'
+
+export default class Counter extends LivePulseComponent {
+  count = 0
+
+  async init() {
+    // runs before render — initialize state here
+  }
+
+  async increment() {
+    this.count++
+  }
+
+  async decrement() {
+    this.count = Math.max(0, this.count - 1)
+  }
+
+  async reset() {
+    this.count = 0
+  }
+
+  async render(ctx: HttpContext) {
+    return ctx.view.render('components/counter', { count: this.count })
   }
 }
 ```
 
-- The dot `.` export is the main export.
-- The `./types` exports all the types defined inside the `./build/src/types.js` file (the compiled output).
+### Component template (`resources/views/components/counter.edge`)
 
-Feel free to change the exports as per your requirements.
+```html
+<div x-data="">
+  <button @click="$lp.increment()">+</button>
+  <button @click="$lp.decrement()">-</button>
+  <button @click="$lp.reset()">Reset</button>
+  <span x-text="'Count: ' + $lp.data.count"></span>
+</div>
+```
 
-## Testing
+---
 
-We configure the [Japa test runner](https://japa.dev/) with this starter kit. Japa is used in AdonisJS applications as well. Just run one of the following commands to execute tests.
+## Using in Edge templates
 
-- `npm run test`: This command will first lint the code using ESlint and then run tests and report the test coverage using [c8](https://github.com/bcoe/c8).
-- `npm run quick:test`: Runs only the tests without linting or coverage reporting.
+```html
+{{-- resources/views/pages/home.edge --}}
+@lp('counter')
+```
 
-The starter kit also has a Github workflow file to run tests using Github Actions. The tests are executed against `Node.js 20.x` and `Node.js 21.x` versions on both Linux and Windows. Feel free to edit the workflow file in the `.github/workflows` directory.
+The `@lp` tag renders the component and injects the required `lp:id` and `lp:snapshot` attributes automatically.
 
-## TypeScript workflow
+---
 
-- The starter kit uses [tsc](https://www.typescriptlang.org/docs/handbook/compiler-options.html) for compiling the TypeScript to JavaScript when publishing the package.
-- [TS-Node](https://typestrong.org/ts-node/) and [SWC](https://swc.rs/) are used to run tests without compiling the source code.
-- The `tsconfig.json` file is extended from [`@adonisjs/tsconfig`](https://github.com/adonisjs/tooling-config/tree/main/packages/typescript-config) and uses the `NodeNext` module system. Meaning the packages are written using ES modules.
-- You can perform type checking without compiling the source code using the `npm run type check` script.
+## Client API — `$lp` magic
 
-Feel free to explore the `tsconfig.json` file for all the configured options.
+The `$lp` Alpine.js magic is available inside any element with a `lp:id` attribute.
 
-## ESLint and Prettier setup
+| Usage | Description |
+|---|---|
+| `$lp.data.property` | Read reactive state |
+| `$lp.data.property = value` | Write reactive state (local only) |
+| `$lp.actionName(...args)` | Call a backend action |
 
-The starter kit configures ESLint and Prettier
-using our [shared config](https://github.com/adonisjs/tooling-config/tree/main/packages).
-ESLint configuration is stored within the `eslint.config.js` file.
-Prettier configuration is stored within the `package.json` file.
-Feel free to change the configuration, use custom plugins, or remove both tools altogether.
+Backend action calls:
+- POST to `/lp/update` with the current snapshot
+- Re-render the component server-side
+- Morph the DOM with the new HTML
+- Merge updated data back into Alpine reactive state
 
-## Using Stale bot
+---
 
-The [Stale bot](https://github.com/apps/stale) is a Github application that automatically marks issues and PRs as stale and closes after a specific duration of inactivity.
+## Component lifecycle
 
-Feel free to delete the `.github/stale.yml` and `.github/lock.yml` files if you decide not to use the Stale bot.
+| Method | When it runs |
+|---|---|
+| `init()` | Before every render (initial + updates) |
+| `render(ctx)` | Returns the component HTML string |
+
+---
+
+## Security
+
+- Only **public** methods (not prefixed with `_`) can be called from the client
+- CSRF token is read from the request and embedded in the snapshot
+
+---
+
+## Example
+
+See [`example.html`](./example.html) for a self-contained demo with counter, form, and todo list components (mocked backend).
+
+---
+
+## TypeScript types
+
+```ts
+import type { LivePulsePayload, LivePulseResponse } from 'livepulse'
+```
+
+| Type | Description |
+|---|---|
+| `LivePulsePayload` | Incoming request payload (`action`, `args`, `snapshot`) |
+| `LivePulseResponse` | Response from the update route (`html`, `data`, `success`) |
+
+---
+
+## Repository
+
+- GitHub: [github.com/sbsouhail/livepulse](https://github.com/sbsouhail/livepulse)
+- Issues: [github.com/sbsouhail/livepulse/issues](https://github.com/sbsouhail/livepulse/issues)
+
+## License
+
+MIT — [Souhail SBOUI](https://github.com/sbsouhail)
