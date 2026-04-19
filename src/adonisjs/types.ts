@@ -3,14 +3,17 @@ import type { Edge } from "edge.js";
 /**
  * LivePulse Types
  */
+export interface LivePulseSnapshot {
+	id: string;
+	name: string;
+	data?: Record<string, unknown>;
+	csrf?: string;
+}
+
 export interface LivePulsePayload {
 	action: string;
 	args: unknown[];
-	snapshot: {
-		id: string;
-		name: string;
-		data?: Record<string, unknown>;
-	};
+	snapshot: LivePulseSnapshot;
 }
 
 export interface LivePulseResponse {

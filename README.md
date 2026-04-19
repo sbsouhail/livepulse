@@ -1,121 +1,184 @@
+# LivePulse
 
-# TS NPM Package Boilerplate (2025)
+> **Status: Development paused — resuming soon.**
+> This project was on hold pending the release of AdonisJS v7, which just shipped. Active development is resuming.
 
-This TypeScript NPM package boilerplate is designed to kickstart the development of TypeScript libraries for Node.js and the browser. It features a modern build setup with TypeScript, leveraging `tsup` for bundling and `@changesets/cli` for version management. The package exports a simple function as an example to demonstrate the setup.
+Reactive UI components for [AdonisJS](https://adonisjs.com/) — powered by [Edge.js](https://edgejs.dev/) and [Alpine.js](https://alpinejs.dev/). Build interactive interfaces without writing frontend JavaScript. Inspired by [Laravel Livewire](https://livewire.laravel.com/).
 
-## Features
+---
 
-- TypeScript for type safety.
-- Biome for linting and formatting.
-- Dual package output (CommonJS and ESM) for compatibility.
-- Type definitions for TypeScript projects.
-- Automated build and release scripts.
+## How it works
 
-## Prerequisites
+1. Define a `LivePulseComponent` class (backend) with state and actions
+2. Render it in Edge templates with `@lp('component-name')`
+3. Call backend actions from Alpine.js HTML using `$lp.actionName()`
+4. LivePulse sends an AJAX request to `/lp/update`, re-renders the component, and morphs the DOM
 
-- Node.js v22.5.1 (ensure you have this version by using `.nvmrc`)
-- `pnpm` (Follow [pnpm installation guide](https://pnpm.io/installation) if you haven't installed it)
-- [Biome](https://biomejs.dev/) for linting and formatting
+No page reloads. No manual fetch calls. No frontend state management.
 
-## Reuse
-
-### Step 1: Clone the Boilerplate Repository
-
-First, clone the existing repository `simonorzel26/npm-package-boilerplate-2025` to your local machine. This step involves copying all the files from the original repository.
-
-```bash
-git clone https://github.com/simonorzel26/npm-package-boilerplate-2025.git <your-new-repository-name>
-cd <your-new-repository-name>
-```
-
-### Step 2: Remove the Existing Git History
-
-Since you're creating a new project, you'll likely want to start with a clean history:
-
-```bash
-rm -rf .git
-```
-
-This command removes the `.git` directory which contains all the git history of the original repository.
-
-### Step 3: Initialize a New Repository
-
-Now, initialize a new git repository:
-
-```bash
-git init
-git add .
-git commit -m "Initial commit based on npm-package-boilerplate-2025"
-```
-
-### Step 4: Create a New Repository on GitHub
-
-Go to GitHub and create a new repository named `<your-new-repository-name>`. Do not initialize it with a README, .gitignore, or license since you are importing an existing project.
-
-### Step 5: Push to GitHub
-
-Link your local repository to the GitHub repository and push the changes:
-
-```bash
-git remote add origin https://github.com/<your-username>/<your-new-repository-name>.git
-git branch -M main
-git push -u origin main
-```
-
-Replace `<your-username>` with your GitHub username.
+---
 
 ## Installation
 
-To use this boilerplate for your project, clone the repository and install the dependencies.
+```bash
+npm install livepulse
+# or
+pnpm add livepulse
+```
+
+### Peer dependencies
 
 ```bash
-pnpm install
+pnpm add @adonisjs/core edge.js alpinejs @alpinejs/morph
 ```
 
-## Usage
+---
 
-After installation, you can start using the boilerplate to build your TypeScript library. Here's how to import and use the example function exported by this package:
+## Setup
 
-```typescript
-import { foo } from 'your-package-name';
+### 1. Register the provider
 
-console.log(foo('Hello, world!'));
+In `adonisrc.ts`:
+
+```ts
+import { defineConfig } from '@adonisjs/core/build/config'
+
+export default defineConfig({
+  providers: [
+    // ...other providers
+    () => import('livepulse/adonisjs/livepulse_provider'),
+  ],
+})
 ```
 
-## Development
+### 2. Include the client script
 
-This package includes several scripts to help with development:
+Add the LivePulse client bundle to your layout template. It registers the `$lp` Alpine.js magic automatically.
 
-- `pnpm run build`: Compiles the TypeScript source code and generates both CommonJS and ESM modules along with type definitions.
-- `pnpm run lint`: Runs TypeScript compiler checks without emitting code to ensure type safety.
-- `pnpm run release`: Bundles the package and publishes it to NPM with version management.
-
-### Adding New Functions
-
-To add a new function, create a `.ts` file in the `src` directory. For example:
-
-```typescript
-// src/newFunction.ts
-export const newFunction = (): void => {
-  // Implementation here
-};
+```html
+<script src="/livepulse.iife.js" defer></script>
 ```
 
-Then, export it from `index.ts`:
+> The client bundle initializes Alpine.js and the `$lp` magic. Do **not** initialize Alpine.js separately.
 
-```typescript
-// src/index.ts
-export * from './newFunction';
+---
+
+## Creating a component
+
+Place components in `app/controllers/livepulse/`. The file name must follow the pattern `{name}_livepulse.ts`.
+
+```ts
+// app/controllers/livepulse/counter_livepulse.ts
+import { LivePulseComponent } from 'livepulse'
+import type { HttpContext } from '@adonisjs/core/http'
+
+export default class Counter extends LivePulseComponent {
+  count = 0
+
+  async init() {
+    // runs before render — initialize state here
+  }
+
+  async increment() {
+    this.count++
+  }
+
+  async decrement() {
+    this.count = Math.max(0, this.count - 1)
+  }
+
+  async reset() {
+    this.count = 0
+  }
+
+  async render(ctx: HttpContext) {
+    return ctx.view.render('components/counter', { count: this.count })
+  }
+}
 ```
 
-## Contributing
+### Component template (`resources/views/components/counter.edge`)
 
-Contributions are welcome! Please submit a pull request or create an issue for any features, bug fixes, or improvements.
+```html
+<div x-data="">
+  <button @click="$lp.increment()">+</button>
+  <button @click="$lp.decrement()">-</button>
+  <button @click="$lp.reset()">Reset</button>
+  <span x-text="'Count: ' + $lp.data.count"></span>
+</div>
+```
+
+---
+
+## Using in Edge templates
+
+```html
+{{-- resources/views/pages/home.edge --}}
+@lp('counter')
+```
+
+The `@lp` tag renders the component and injects the required `lp:id` and `lp:snapshot` attributes automatically.
+
+---
+
+## Client API — `$lp` magic
+
+The `$lp` Alpine.js magic is available inside any element with a `lp:id` attribute.
+
+| Usage | Description |
+|---|---|
+| `$lp.data.property` | Read reactive state |
+| `$lp.data.property = value` | Write reactive state (local only) |
+| `$lp.actionName(...args)` | Call a backend action |
+
+Backend action calls:
+- POST to `/lp/update` with the current snapshot
+- Re-render the component server-side
+- Morph the DOM with the new HTML
+- Merge updated data back into Alpine reactive state
+
+---
+
+## Component lifecycle
+
+| Method | When it runs |
+|---|---|
+| `init()` | Before every render (initial + updates) |
+| `render(ctx)` | Returns the component HTML string |
+
+---
+
+## Security
+
+- Only **public** methods (not prefixed with `_`) can be called from the client
+- CSRF token is read from the request and embedded in the snapshot
+
+---
+
+## Example
+
+See [`example.html`](./example.html) for a self-contained demo with counter, form, and todo list components (mocked backend).
+
+---
+
+## TypeScript types
+
+```ts
+import type { LivePulsePayload, LivePulseResponse } from 'livepulse'
+```
+
+| Type | Description |
+|---|---|
+| `LivePulsePayload` | Incoming request payload (`action`, `args`, `snapshot`) |
+| `LivePulseResponse` | Response from the update route (`html`, `data`, `success`) |
+
+---
+
+## Repository
+
+- GitHub: [github.com/sbsouhail/livepulse](https://github.com/sbsouhail/livepulse)
+- Issues: [github.com/sbsouhail/livepulse/issues](https://github.com/sbsouhail/livepulse/issues)
 
 ## License
 
-This project is open-sourced under the MIT License. See the [LICENSE](https://github.com/simonorzel26/ts-npm-package-boilerplate-2025/blob/main/LICENSE) file for more details.
-
-## Author
-
-Simon Orzel
+MIT — [Souhail SBOUI](https://github.com/sbsouhail)

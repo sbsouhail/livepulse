@@ -1,17 +1,29 @@
 import fs from "node:fs";
 import path from "node:path";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { HttpContext } from "@adonisjs/core/http";
 import type { ApplicationService } from "@adonisjs/core/types";
 import edge from "edge.js";
 import type { TagContract } from "edge.js/types";
-import type { LivePulsePayload, LivePulseResponse } from "./types.js";
+import type { LivePulsePayload, LivePulseResponse, LivePulseSnapshot } from "./types.js";
 import { extractData, importComponent } from "./utils.js";
+
 /**
  * LivePulse Provider for AdonisJS
  */
 export default class LivePulseProvider {
-	constructor(protected app: ApplicationService) {}
+	constructor(
+		protected app: ApplicationService,
+		protected options: { componentPath?: string } = {},
+	) {}
+
+	private get componentsBaseDir(): string {
+		return (
+			this.options.componentPath ??
+			join(process.cwd(), "app", "controllers", "livepulse")
+		);
+	}
 
 	start() {
 		this.registerUpdateRoute();
@@ -54,12 +66,13 @@ export default class LivePulseProvider {
 	 * Register Edge helper
 	 */
 	private registerEdgeHelper() {
+		const baseDir = this.componentsBaseDir;
 		edge.global(
 			"lp",
 			(name: string) => async (state: { request: { ctx: HttpContext } }) => {
 				try {
 					const ctx = state.request.ctx;
-					const ComponentClass = await importComponent(name);
+					const ComponentClass = await importComponent(name, baseDir);
 					const instance = new (ComponentClass as any)(ctx);
 					return await instance.handle(ctx);
 				} catch (error) {
@@ -124,20 +137,32 @@ export default class LivePulseProvider {
 	 * Validate payload
 	 */
 	private validatePayload(payload: Record<string, unknown>): LivePulsePayload {
-		const { action, args = [], snapshot } = payload;
+		const { action, args = [], snapshot: rawSnapshot } = payload;
 
 		if (!action || typeof action !== "string") {
 			throw new Error("Missing action");
 		}
 
+		if (!rawSnapshot || typeof rawSnapshot !== "string") {
+			throw new Error("Missing or invalid snapshot");
+		}
+
+		let snapshot: LivePulseSnapshot;
+		try {
+			snapshot = JSON.parse(
+				Buffer.from(rawSnapshot, "base64").toString("utf8"),
+			) as LivePulseSnapshot;
+		} catch {
+			throw new Error("Invalid snapshot encoding");
+		}
+
+		if (!snapshot.id) throw new Error("Missing snapshot ID");
+		if (!snapshot.name) throw new Error("Missing component name");
+
 		return {
-			action: action as string,
+			action,
 			args: args as unknown[],
-			snapshot: JSON.parse(atob(snapshot as string)) as {
-				id: string;
-				name: string;
-				data?: Record<string, unknown>;
-			},
+			snapshot,
 		};
 	}
 
@@ -146,11 +171,11 @@ export default class LivePulseProvider {
 	 */
 	private async createInstance(payload: LivePulsePayload, ctx: HttpContext) {
 		const snapshot = payload.snapshot;
-		if (!snapshot?.id) {
-			throw new Error("Missing snapshot ID");
-		}
 
-		const ComponentClass = await importComponent(snapshot.name);
+		const ComponentClass = await importComponent(
+			snapshot.name,
+			this.componentsBaseDir,
+		);
 		const instance = new (ComponentClass as any)(ctx);
 
 		if (snapshot.data) {

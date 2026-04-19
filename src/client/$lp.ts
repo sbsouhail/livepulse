@@ -23,17 +23,17 @@ export function initLP(AlpineInstance: Alpine) {
 	});
 }
 
-function parseSnapshot(snapshot: string, id: string) {
+export function parseSnapshot(snapshot: string, id: string) {
 	try {
 		const parsed = JSON.parse(atob(snapshot));
 		// If the snapshot already has a data structure, use it as is
 		if (parsed.data && typeof parsed.data === "object") {
 			return {
 				data: parsed.data,
+				id, // fallback when snapshot omits id
 				...Object.fromEntries(
 					Object.entries(parsed).filter(([key]) => key !== "data"),
 				),
-				id,
 			};
 		}
 		// Otherwise, extract lp_meta and wrap user data

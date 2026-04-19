@@ -1,4 +1,6 @@
 import { randomBytes } from "node:crypto";
+import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 
 /**
  * Extract component data (remove duplicated logic)
@@ -51,22 +53,22 @@ export function addLpAttributes(
 	return html.replace(/^(\s*<[^>]+)/, `$1 ${attrs}`);
 }
 
-/**
- * Component cache for performance
- */
 const cache = new Map<string, { default: new () => unknown }>();
 
 export async function importComponent(
 	name: string,
+	baseDir?: string,
 ): Promise<{ default: new () => unknown }> {
-	const cached = cache.get(name);
-	if (cached) {
-		return cached;
-	}
+	const cacheKey = `${baseDir ?? ""}:${name}`;
+	const cached = cache.get(cacheKey);
+	if (cached) return cached;
 
-	const { default: ComponentClass } = await import(
-		`../../../../../../../app/controllers/livepulse/${name.toLowerCase()}.js`
-	);
-	cache.set(name, ComponentClass);
-	return ComponentClass;
+	const dir =
+		baseDir ?? join(process.cwd(), "app", "controllers", "livepulse");
+	const filePath = join(dir, `${name.toLowerCase()}.js`);
+	const module = (await import(
+		pathToFileURL(filePath).href
+	)) as { default: new () => unknown };
+	cache.set(cacheKey, module);
+	return module;
 }
